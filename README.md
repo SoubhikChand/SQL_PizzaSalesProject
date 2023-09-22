@@ -1,6 +1,7 @@
 # SQL_PizzaSalesProject
 
 Project Overview:
+
 Title: "Pizza Restaurant Data Analysis and Optimization"
 
 Description:
