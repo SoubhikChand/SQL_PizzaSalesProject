@@ -1,4 +1,4 @@
-select * from pizza_price
+
 
 --//Top 10 pizzas based on sales//-- 
 
@@ -16,11 +16,11 @@ ORDER BY total_sales DESC;
 
 --//Top 5 Most ordered pizza//--
 
-select c.name, count(a.pizza_id) most_ordered
+select c.name, count(a.pizza_id) most_ordered, a.quantity
 from order_details a
 join pizza_price b on a.pizza_id = b.pizza_id
 join pizza_types c on c.pizza_type_id = b.pizza_type_id
-group by c.name
+group by c.name, a.quantity
 order by most_ordered desc 
 offset 0 rows
 fetch next 5 rows only;
@@ -66,6 +66,7 @@ WHERE p1.size='M'
 GROUP BY p1.name
 ORDER BY total_sales desc;
 
+
 ----//Month wise sales//----
 
 SELECT
@@ -89,7 +90,7 @@ FROM
      FROM order_details a
      JOIN orders c ON c.order_id = a.order_id
      JOIN pizza_price b ON a.pizza_id = b.pizza_id
-     GROUP BY b.size, a.quantity, b.price, c.date) p2
+     GROUP BY c.date,a.quantity, b.price) p2
 GROUP BY unique_month
 ORDER BY unique_month;
 
@@ -201,12 +202,64 @@ FROM (
     GROUP BY c.order_id
 ) AS order_values;
 
+
+
 -----//Total Revenue//----
 
 SELECT SUM(a.quantity * b.price) AS total_revenue
 FROM order_details a
 JOIN orders c ON c.order_id = a.order_id
 JOIN pizza_price b ON a.pizza_id = b.pizza_id;
+
+
+----Numbers of Orders------
+
+SELECT COUNT(order_id) orders_count
+      FROM orders;
+
+
+----Pizza Types-----
+
+SELECT COUNT(pizza_type_id) pizza_types_count
+      FROM pizza_types;
+
+
+-----worst 5 pizza based on lowest sales----
+
+SELECT TOP 5 p1.name, SUM(p1.sales) as total_sales
+FROM (
+    SELECT c.name, b.size, (COUNT(a.pizza_id) * a.quantity * b.price) as sales
+    FROM order_details a
+    JOIN pizza_price b ON a.pizza_id = b.pizza_id
+    JOIN pizza_types c ON c.pizza_type_id = b.pizza_type_id
+    GROUP BY c.name, b.size, a.quantity, b.price
+) p1
+GROUP BY p1.name
+ORDER BY total_sales ASC;
+
+---- Worst 5 pizza based on lowest sales using ROW_NUMBER()----
+WITH PizzaSalesRank AS (
+    SELECT
+        p1.name,
+        SUM(p1.sales) as total_sales,
+        ROW_NUMBER() OVER (ORDER BY SUM(p1.sales) ASC) AS SalesRank
+    FROM (
+        SELECT
+            c.name,
+            b.size,
+            (COUNT(a.pizza_id) * a.quantity * b.price) as sales
+        FROM order_details a
+        JOIN pizza_price b ON a.pizza_id = b.pizza_id
+        JOIN pizza_types c ON c.pizza_type_id = b.pizza_type_id
+        GROUP BY c.name, b.size, a.quantity, b.price
+    ) p1
+    GROUP BY p1.name
+)
+SELECT name, total_sales
+FROM PizzaSalesRank
+WHERE SalesRank <= 5;
+
+
 
 ------//Weekday how many orders//------count order
 
